@@ -1,0 +1,7 @@
+sources += [
+  "$(DIR)/Parser.cpp"
+  "$(DIR)/ExprParser.cpp"
+  "$(DIR)/FuncParser.cpp"
+  "$(DIR)/StmtParser.cpp"
+  "$(DIR)/VariParser.cpp"
+]

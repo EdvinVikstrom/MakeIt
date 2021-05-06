@@ -1,0 +1,4 @@
+sources += [
+  "$(DIR)/GMakeTarget.cpp"
+  "$(DIR)/YCMTarget.cpp"
+]

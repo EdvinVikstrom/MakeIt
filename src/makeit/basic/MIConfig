@@ -1,0 +1,4 @@
+sources += [
+  "$(DIR)/Function.cpp"
+  "$(DIR)/Variable.cpp"
+]

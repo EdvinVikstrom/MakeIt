@@ -1,0 +1,11 @@
+sources += [
+  "$(DIR)/MakeIt.cpp"
+  "$(DIR)/Text.cpp"
+  "$(DIR)/Logger.cpp"
+]
+
+source: "$(DIR)/basic/MIConfig"
+source: "$(DIR)/functions/MIConfig"
+source: "$(DIR)/lexer/MIConfig"
+source: "$(DIR)/parser/MIConfig"
+source: "$(DIR)/target/MIConfig"

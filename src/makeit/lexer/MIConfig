@@ -1,0 +1,4 @@
+sources += [
+  "$(DIR)/Lexer.cpp"
+  "$(DIR)/Token.cpp"
+]

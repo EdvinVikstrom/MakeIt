@@ -1,0 +1,16 @@
+sources += [
+  "$(DIR)/FnAddLibrary.cpp"
+  "$(DIR)/FnAddInclude.cpp"
+  "$(DIR)/FnAddIncludeDir.cpp"
+  "$(DIR)/FnAddLibraryDir.cpp"
+  "$(DIR)/FnAddDefine.cpp"
+  "$(DIR)/FnAddCFlags.cpp"
+  "$(DIR)/FnAddLFlags.cpp"
+  "$(DIR)/FnAddPackage.cpp"
+  "$(DIR)/FnPrint.cpp"
+  "$(DIR)/FnSource.cpp"
+  "$(DIR)/FnProject.cpp"
+  "$(DIR)/FnFiles.cpp"
+  "$(DIR)/FnExtern.cpp"
+  "$(DIR)/FnInstall.cpp"
+]
