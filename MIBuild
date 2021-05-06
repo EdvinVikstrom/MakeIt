@@ -1,0 +1,29 @@
+if ?USE_GNU then
+  CC ?= GNU
+end
+
+CC ?= LLVM
+
+project: {
+  name		"MakeIt"
+  version 	"2021"
+  output	"makeit"
+  kind 		EXECUTABLE
+  lang 		CXX
+  cc 		CC
+}
+
+LOCALEDIR = "/usr/share/locale"
+PACKAGE = "makeit"
+
+sources = [ ]
+
+source: "$(DIR)/extern/MIConfig"
+source: "$(DIR)/src/makeit/MIConfig"
+
+add_include_directory: [ "$(DIR)/include" ]
+add_cflags: [ CXX ], [ "-std=c++20" "-g" "-Og" ]
+add_lflags: [ ]
+files: sources
+
+install: "makeit", "/bin/makeit"

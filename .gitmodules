@@ -1,0 +1,3 @@
+[submodule "extern/libme"]
+	path = extern/libme
+	url = git@github.com:Ficklampan/libme.git

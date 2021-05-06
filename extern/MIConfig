@@ -1,0 +1,11 @@
+LIBME_PATH = "$(DIR)/libme"
+
+add_include_directory: [
+  "$(LIBME_PATH)/include"
+]
+
+add_library_directory: [
+  "$(LIBME_PATH)/"
+]
+
+add_library: STATIC, "me"
