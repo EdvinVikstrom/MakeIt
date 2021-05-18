@@ -1,15 +1,15 @@
-#ifndef MAKEIT_FUNCTION_PRINT_HPP
-  #define MAKEIT_FUNCTION_PRINT_HPP
+#ifndef MAKEIT_FUNCTION_CONFIGURE_HPP
+  #define MAKEIT_FUNCTION_CONFIGURE_HPP
 
 #include "makeit/basic/Context.hpp"
 
 namespace makeit {
 
-  class PrintFunc : public Function {
+  class ConfigureFunc : public Function {
 
   public:
 
-    PrintFunc();
+    ConfigureFunc();
 
     int execute(const FuncVariant &variant, const me::vector<Variable*> &args, Context &context) override;
 

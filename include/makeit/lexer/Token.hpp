@@ -2,7 +2,6 @@
   #define MAKEIT_TOKEN_HPP
 
 #include "makeit/Common.hpp"
-#include "makeit/basic/Source.hpp"
 
 namespace makeit {
 
@@ -47,12 +46,13 @@ namespace makeit {
   
   struct TokenLocation {
 
-    Source source;
+    me::string_view file;
+    me::string_view data;
     me::string_view pos;
 
     [[nodiscard]] static inline TokenLocation merge(const TokenLocation &location1, const TokenLocation &location2)
     {
-      return {location1.source, {location1.pos.begin(), location2.pos.end()}};
+      return {location1.file, {location1.pos.begin(), location2.pos.end()}};
     }
 
     [[nodiscard]] static inline TokenLocation none()
@@ -62,7 +62,7 @@ namespace makeit {
 
     [[nodiscard]] bool operator==(const TokenLocation &location) const
     {
-      return source == location.source && pos == location.pos;
+      return file == location.file && pos == location.pos;
     }
 
   };

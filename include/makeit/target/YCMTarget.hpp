@@ -1,25 +1,11 @@
 #ifndef MAKEIT_YCM_TARGET_HPP
   #define MAKEIT_YCM_TARGET_HPP
 
-#include "Target.hpp"
+#include "makeit/basic/Project.hpp"
 
-namespace makeit {
+namespace makeit::ycm {
 
-  class YCMTarget : public Target {
-
-  public:
-
-    YCMTarget(me::string* output)
-      : Target(output)
-    {
-    }
-
-    int generate(const ProjectVar &project) override;
-
-    int write_cflags(const ProjectVar &project);
-    int write_files(const ProjectVar &project);
-
-  };
+  int generate(const Project &project, me::string &buffer);
 
 }
 

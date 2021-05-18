@@ -15,3 +15,9 @@ Run `makeit --help` for help.
 
 # Info
 Trying to make the code not large.
+
+# TODO
+- Run `makeit` in the Makefile if the files are updated
+- Show progress when compiling sources
+- Use the new stuff for logging
+- For loops and While loops

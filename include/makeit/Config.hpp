@@ -6,9 +6,15 @@
 namespace makeit {
 
   struct Config {
-    me::string config_file;
-    me::string source_file;
+    /* defaults */
+    me::string_view compiler;
+    me::string_view linker;
+    me::string_view build_path;
+    me::string_view config_file;
+    me::string_view source_file;
   };
+
+  extern Config config;
 
 }
 

@@ -45,12 +45,14 @@ int makeit::Parser::parse_token(const Token* &iter)
       "unexpected token '%s'", token_type_name(iter->type));
 }
 
-int makeit::Parser::parse_string(me::string &value, const TokenLocation &location)
+int makeit::Parser::parse_string(StringVar::Value &value, const TokenLocation &location)
 {
+  me::size_t begin;
   me::size_t index = 0;
   while (index < value.size())
   {
-    me::size_t begin = value.find("$(");
+    begin = value.find("$(");
+    index = begin;
 
     if (begin == me::string::npos)
       break;

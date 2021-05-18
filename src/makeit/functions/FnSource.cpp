@@ -2,24 +2,26 @@
 #include "makeit/MakeIt.hpp"
 #include "makeit/Text.hpp"
 
-int makeit::func_source_init(Context &context)
-{
-  Function* function = new Function{
-    {
-      new StringArg(),
-    }, func_source};
-  context.functions.put("source", function);
-  return 0;
+namespace makeit {
+
+  static const me::vector<FuncArgument> variant1 = {
+    {"file", Variable::STRING},
+  };
+
 }
 
-int makeit::func_source(const me::vector<Variable*> &args, Context &context, void* ptr)
+makeit::SourceFunc::SourceFunc()
+  : Function("source")
 {
-  Instance* instance = reinterpret_cast<Instance*>(ptr);
+  variants.push_back(FuncVariant(1, variant1));
+}
 
+int makeit::SourceFunc::execute(const FuncVariant &variant, const me::vector<Variable*> &args, Context &context)
+{
   for (me::size_t i = 0; i < args.size(); i++)
   {
     Variable* var = args.at(i);
-    instance->read_source(reinterpret_cast<StringVar*>(var)->value);
+    instance.read_source(reinterpret_cast<StringVar*>(var)->value);
   }
   return 0;
 }

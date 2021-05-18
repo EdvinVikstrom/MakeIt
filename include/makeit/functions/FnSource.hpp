@@ -1,12 +1,19 @@
 #ifndef MAKEIT_FUNCTION_SOURCE_HPP
   #define MAKEIT_FUNCTION_SOURCE_HPP
 
-#include "makeit/parser/Context.hpp"
+#include "makeit/basic/Context.hpp"
 
 namespace makeit {
 
-  int func_source_init(Context &context);
-  int func_source(const me::vector<Variable*> &args, Context &context, void* ptr);
+  class SourceFunc : public Function {
+
+  public:
+
+    SourceFunc();
+
+    int execute(const FuncVariant &variant, const me::vector<Variable*> &args, Context &context) override;
+
+  };
 
 }
 

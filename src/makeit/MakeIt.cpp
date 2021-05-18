@@ -10,63 +10,70 @@
 #include "makeit/target/YCMTarget.hpp"
 
 /* --- Functions --- */
-#include "makeit/functions/FnAddCFlags.hpp"
-#include "makeit/functions/FnAddDefine.hpp"
-#include "makeit/functions/FnAddInclude.hpp"
-#include "makeit/functions/FnAddIncludeDir.hpp"
-#include "makeit/functions/FnAddLFlags.hpp"
-#include "makeit/functions/FnAddLibrary.hpp"
-#include "makeit/functions/FnAddLibraryDir.hpp"
-#include "makeit/functions/FnAddPackage.hpp"
-#include "makeit/functions/FnExtern.hpp"
-#include "makeit/functions/FnFiles.hpp"
-#include "makeit/functions/FnInstall.hpp"
+#include "makeit/functions/FnSetProperty.hpp"
+#include "makeit/functions/FnAddProperty.hpp"
+#include "makeit/functions/FnAddExtern.hpp"
+#include "makeit/functions/FnAddFiles.hpp"
+#include "makeit/functions/FnAddInstall.hpp"
+#include "makeit/functions/FnConfigure.hpp"
 #include "makeit/functions/FnPrint.hpp"
 #include "makeit/functions/FnProject.hpp"
 #include "makeit/functions/FnSource.hpp"
 
 #include <libme/filesystem.hpp>
-
-#include <getopt.h>
+#include <libme/options.hpp>
 
 #define MAKEIT_VERSION_STRING "21.2.0"
 #define MAKEIT_NAME_STRING "MakeIt"
 
+namespace makeit {
+  Config config;
+  Instance instance(stdout);
+  Project project;
+}
+
 makeit::Instance::Instance(FILE* log)
-  : logger(log), context({.func_user_ptr = this}), lexer(logger), parser(logger, alloc, context)
+  : logger(log), lexer(logger), parser(logger, alloc, context)
 {
 }
 
 int makeit::Instance::parse_args(int argc, char** argv)
 {
-  static struct option long_options[] = {
-    {"help", no_argument, 0, 'h'},
-    {"file", required_argument, 0, 'f'},
-
-    {"define", required_argument, 0, 'D'}
+  static struct me::option_info options[] = {
+    {1, "help", 'h', me::OPTION_VALUE_NONE},
+    {2, "file", 'f', me::OPTION_VALUE_REQUIRED},
+    {3, "define", 'D', me::OPTION_VALUE_OPTIONAL},
   };
 
-  while (true)
+  me::size_t index = 0;
+  while (index != argc)
   {
-    int opt_index;
-    int c = getopt_long(argc, argv, "hf:D::", long_options, &opt_index);
+    const me::option option = me::next_option(3, options, argc, argv, index);
 
-    if (c == -1)
-      break;
+    if (option.info == nullptr)
+      continue;
 
-    switch (c)
+    switch (option.info->short_name)
     {
       case 'h':
 	print_usage();
 	break;
 
       case 'f':
-	config.source_file = optarg;
+	config.source_file = option.value1;
 	break;
 
       case 'D':
-	if (optarg)
-	  context.variables[optarg] = alloc.calloc<IntegerVar>(1);
+	if (!option.value1.is_empty())
+	{
+	  if (!option.value2.is_empty())
+	  {
+	    context.variables[option.value1] = alloc.calloc<StringVar>(option.value2);
+	  }else
+	  {
+	    context.variables[option.value1] = alloc.calloc<IntegerVar>(1);
+	  }
+	}
 	break;
     }
   }
@@ -75,16 +82,22 @@ int makeit::Instance::parse_args(int argc, char** argv)
 
 int makeit::Instance::init(int argc, char** argv)
 {
-  config.config_file = getenv("HOME");
-  config.config_file += "/.config/makeit/init.mi";
+  char config_file_str[PATH_MAX];
+  ::strcpy(config_file_str, getenv("HOME"));
+  ::strcat(config_file_str, "/.config/makeit/init.mi");
+
+  config.compiler = "LLVM";
+  config.linker = "LLVM";
+  config.build_path = "./build";
+  config.config_file = config_file_str;
   config.source_file = "./MIBuild";
 
   parse_args(argc, argv);
 
-  init_variables();
-  init_functions();
-
   try {
+
+    init_variables();
+    init_functions();
 
     /* Read config file */
     if (me::filesystem::exists(config.config_file))
@@ -92,17 +105,11 @@ int makeit::Instance::init(int argc, char** argv)
 
     read_source(config.source_file);
 
-    /* Generating targets */
-    const TargetType main_target = target_type_from_string(main_target_variable->value);
-    generate_target(main_target);
-    for (me::size_t i = 0; i < targets_variable->value.size(); i++)
-    {
-      /* TODO: error stuff */
-      Variable* target_var = targets_variable->value.at(i);
-      const TargetType target = target_type_from_string(reinterpret_cast<TextVar*>(target_var)->value);
-      if (target != main_target)
-	generate_target(target);
-    }
+    /* Make sure all necessary values are set. */
+    /* If not; assign to default values */
+    project.build_config.validate();
+
+    generate_targets();
 
   }catch (const Exception &e1)
   {
@@ -116,12 +123,12 @@ int makeit::Instance::init(int argc, char** argv)
 
 int makeit::Instance::init_variables()
 {
-  file_variable = alloc.calloc<TextVar>("");
-  directory_variable = alloc.calloc<TextVar>("");
-  main_target_variable = alloc.calloc<TextVar>("GMAKE");
+  file_variable = alloc.calloc<StringVar>("");
+  directory_variable = alloc.calloc<StringVar>("");
+  main_target_variable = alloc.calloc<StringVar>("GMAKE");
   targets_variable = alloc.calloc<ArrayVar>(ArrayVar::Value());
-  gmake_path_variable = alloc.calloc<TextVar>("./Makefile");
-  ycm_path_variable = alloc.calloc<TextVar>("./.ycm_extra_conf.py");
+  gmake_path_variable = alloc.calloc<StringVar>("./Makefile");
+  ycm_path_variable = alloc.calloc<StringVar>("./.ycm_extra_conf.py");
 
   context.variables["FILE"] = file_variable;
   context.variables["DIR"] = directory_variable;
@@ -130,40 +137,49 @@ int makeit::Instance::init_variables()
   context.variables[".gmake_path"] = gmake_path_variable;
   context.variables[".ycm_path"] = ycm_path_variable;
 
-  project_var.cflags.emplace_back("-xc", LANG_C);
-  project_var.cflags.emplace_back("-xc++", LANG_CXX);
-  project_var.cflags.emplace_back("-xobjc", LANG_OBJC);
-  context.variables[ProjectVar::VARIABLE_NAME] = &project_var;
+  context.variables["LLVM"] = alloc.calloc<StringVar>("clang");
+  context.variables["GNU"] = alloc.calloc<StringVar>("gcc");
+  context.variables["LD"] = alloc.calloc<StringVar>("ld");
 
   static me::vector<me::string_view> enums = {};
-  enums.push_back_vector(get_valid_kind_string());
-  enums.push_back_vector(get_valid_lang_string());
-  enums.push_back_vector(get_valid_cc_string());
-  enums.push_back_vector(get_valid_library_string());
-  enums.push_back_vector(get_valid_extern_string());
-  enums.push_back_vector(get_valid_target_string());
+  enums.push_back_vector({"EXECUTABLE", "STATIC_LIBRARY", "SHARED_LIBRARY", "STATIC", "SHARED"});
+  enums.push_back_vector({"C", "CXX", "CPP", "OBJC"});
+  enums.push_back_vector({"GMAKE", "YCM"});
+  enums.push_back_vector({"ALL"});
 
   for (const me::string_view &e : enums)
-    context.variables.put(e, alloc.calloc<TextVar>(e));
+    context.variables.put(e, alloc.calloc<StringVar>(e));
   return 0;
 }
 
 int makeit::Instance::init_functions()
 {
-  func_add_cflags_init(context);
-  func_add_define_init(context);
-  func_add_include_init(context);
-  func_add_include_directory_init(context);
-  func_add_lflags_init(context);
-  func_add_library_init(context);
-  func_add_library_directory_init(context);
-  func_add_package_init(context);
-  func_extern_init(context);
-  func_files_init(context);
-  func_install_init(context);
-  func_print_init(context);
-  func_project_init(context);
-  func_source_init(context);
+  context.register_function(new AddCFlagsFunc());
+  context.register_function(new AddLFlagsFunc());
+  context.register_function(new AddFlagsFunc());
+  context.register_function(new AddIncludeFunc());
+  context.register_function(new AddIncludePathFunc());
+  context.register_function(new AddLibraryFunc());
+  context.register_function(new AddLibraryPathFunc());
+  context.register_function(new AddPackageFunc());
+
+  context.register_function(new SetBuildDirectoryFunc());
+  context.register_function(new SetBinaryDirectoryFunc());
+  context.register_function(new SetOutputFunc());
+  context.register_function(new SetLanguageFunc());
+  context.register_function(new SetKindFunc());
+  context.register_function(new SetCompilerFunc());
+  context.register_function(new SetLinkerFunc());
+  context.register_function(new SetSystemRootFunc());
+  context.register_function(new SetTargetArchFunc());
+
+  context.register_function(new AddExternFunc());
+  context.register_function(new AddFilesFunc());
+  context.register_function(new AddInstallFunc());
+  context.register_function(new ConfigureFunc());
+  context.register_function(new PrintFunc());
+  context.register_function(new ProjectFunc());
+  context.register_function(new SourceFunc());
   return 0;
 }
 
@@ -180,8 +196,8 @@ int makeit::Instance::print_version() const
 int makeit::Instance::read_source(const me::string_view &path)
 {
   /* Saving the old file and directory values */
-  const me::string_view old_file_value = file_variable->value;
-  const me::string_view old_directory_value = directory_variable->value;
+  const StringVar::Value old_file_value = file_variable->value;
+  const StringVar::Value old_directory_value = directory_variable->value;
 
   if (!me::filesystem::exists(path))
   {
@@ -204,7 +220,7 @@ int makeit::Instance::read_source(const me::string_view &path)
   file_variable->value = path;
   directory_variable->value = directory_path;
 
-  const Source source = {path, {data, file.size}};
+  const MakeItSource source = {path, data};
 
   /* Creating tokens from the text file */
   me::vector<Token> tokens;
@@ -219,31 +235,36 @@ int makeit::Instance::read_source(const me::string_view &path)
   return 0;
 }
 
-int makeit::Instance::generate_target(TargetType target) const
+int makeit::Instance::generate_targets() const
 {
-  switch (target)
+  const StringVar::Value &main_target = main_target_variable->value;
+  generate_target(main_target);
+
+  for (const Variable* var : targets_variable->value)
   {
-    case TARGET_TYPE_GMAKE:
-      {
-	me::string file_data;
-	GMakeTarget gmake(&file_data);
-	gmake.generate(project_var);
-	write_file(gmake_path_variable->value, file_data.size(), file_data.data());
-      }
-      break;
-
-    case TARGET_TYPE_YCM:
-      {
-	me::string file_data;
-	YCMTarget ycm(&file_data);
-	ycm.generate(project_var);
-	write_file(ycm_path_variable->value, file_data.size(), file_data.data());
-      }
-      break;
-
-    default:
-      break;
+    /* TODO: error stuff */
+    generate_target(reinterpret_cast<const StringVar*>(var)->value);
   }
+  return 0;
+}
+
+int makeit::Instance::generate_target(const me::string_view &target) const
+{
+  me::string_view file;
+  me::string buffer;
+  buffer.reserve(4096);
+
+  if (target.equals_ignore_case("gmake"))
+  {
+    file = gmake_path_variable->value;
+    gmake::generate(project, buffer);
+  }else if (target.equals_ignore_case("ycm"))
+  {
+    file = ycm_path_variable->value;
+    ycm::generate(project, buffer);
+  }
+
+  write_file(file, buffer.size(), buffer.data());
   return 0;
 }
 
@@ -278,8 +299,7 @@ int makeit::Instance::write_file(const me::string_view &path, size_t len, char* 
 int main(int argc, char** argv)
 {
   try {
-    makeit::Instance instance = stdout;
-    return instance.init(argc, argv);
+    return makeit::instance.init(argc, argv);
   }catch (const me::exception &e)
   {
     printf("catched me::exception: %s\n", e.get_message());

@@ -1,4 +1,6 @@
 sources += [
   "$(DIR)/Function.cpp"
   "$(DIR)/Variable.cpp"
+  "$(DIR)/Project.cpp"
+  "$(DIR)/BuildConfig.cpp"
 ]

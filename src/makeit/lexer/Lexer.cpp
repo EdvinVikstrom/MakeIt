@@ -17,7 +17,7 @@ makeit::Lexer::Lexer(const Logger &logger)
 {
 }
 
-int makeit::Lexer::lexify(const Source &source, me::vector<Token> &tokens) const
+int makeit::Lexer::lexify(const MakeItSource &source, me::vector<Token> &tokens) const
 {
   me::size_t token_count;
   seek_tokens(source, token_count, '\0');
@@ -129,12 +129,13 @@ int makeit::Lexer::seek_token(const char* &iter, Token &token) const
   /* unknown character */
   }else
   {
-    throw LocException({token.location.source, {iter, iter + 1}}, "Unknown character '%c'", *iter);
+    throw LocException(TokenLocation{token.location.file, token.location.data, {iter, iter + 1}},
+	"Unknown character '%c'", *iter);
   }
   return 0;
 }
 
-int makeit::Lexer::seek_tokens(const Source &source, me::size_t &count, char end_char) const
+int makeit::Lexer::seek_tokens(const MakeItSource &source, me::size_t &count, char end_char) const
 {
   const char* iter = source.data.begin();
 
@@ -148,14 +149,15 @@ int makeit::Lexer::seek_tokens(const Source &source, me::size_t &count, char end
       break;
 
     Token temp;
-    temp.location.source = source;
+    temp.location.file = source.name;
+    temp.location.data = source.data;
     seek_token(iter, temp);
     count++;
   }
   return 0;
 }
 
-int makeit::Lexer::make_tokens(const Source &source, me::size_t count, Token* tokens) const
+int makeit::Lexer::make_tokens(const MakeItSource &source, me::size_t count, Token* tokens) const
 {
   const char* iter = source.data.begin();
 
@@ -166,7 +168,8 @@ int makeit::Lexer::make_tokens(const Source &source, me::size_t count, Token* to
       break;
 
     Token &token = tokens[index++];
-    token.location.source = source;
+    token.location.file = source.name;
+    token.location.data = source.data;
     seek_token(iter, token);
   }
   return 0;

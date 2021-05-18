@@ -2,139 +2,149 @@
 
 #include <libme/filesystem.hpp>
 
-static void append_array(me::string* output, const me::vector<me::string_view> &arr);
-
-int makeit::YCMTarget::generate(const ProjectVar &project)
+int makeit::ycm::generate(const Project &project, me::string &buffer)
 {
-  write_cflags(project);
-  output->push_back('\n');
+  //bool comments = true;
 
-  write_files(project);
-  output->push_back('\n');
+  ///* -------------- */
+  ///* Compiler flags */
+  ///* -------------- */
+  //{
+  //  if (comments)
+  //    buffer.append("# Compiler flags for language C\n");
+  //  buffer.append("CFLAGS_C = [\n");
+  //  const me::vector<Option> &options_c = project.build_config.compile_options.lang_c;
+  //  if (options_c.size() != 0)
+  //  {
+  //    buffer.append("\t'");
+  //    options_c.at(0).string_write(buffer);
+  //    buffer.append("'");
+  //    for (me::size_t i = 1; i != options_c.size(); i++)
+  //    {
+  //      buffer.append(",\n\t'");
+  //      options_c.at(i).string_write(buffer);
+  //      buffer.append("'");
+  //    }
+  //  }
+  //  buffer.append("]\n\n");
 
-  output->append("def Settings(**kwargs):\n");
-  output->append("\tkey = kwargs['filename']\n");
-  output->append("\tif key in SOURCES:\n");
-  output->append("\t\treturn { 'flags': SOURCES[key] }\n");
-  output->append("\telse:\n");
-  output->append("\t\tif IsCFile(key):\n");
-  output->append("\t\t\treturn { 'flags': C_CFLAGS }\n");
-  output->append("\t\telif IsCXXFile(key):\n");
-  output->append("\t\t\treturn { 'flags': CXX_CFLAGS }\n");
-  output->append("\t\telif IsOBJCFile(key):\n");
-  output->append("\t\t\treturn { 'flags': OBJC_CFLAGS }\n");
-  output->append("\treturn { 'flags': [ ] }\n\n");
+  //  if (comments)
+  //    buffer.append("# Compiler flags for language C++\n");
+  //  buffer.append("CFLAGS_CXX = [\n");
+  //  const me::vector<Option> &options_cxx = project.build_config.compile_options.lang_cxx;
+  //  if (options_cxx.size() != 0)
+  //  {
+  //    buffer.append("\t'");
+  //    options_cxx.at(0).string_write(buffer);
+  //    buffer.append("'");
+  //    for (me::size_t i = 1; i != options_cxx.size(); i++)
+  //    {
+  //      buffer.append(",\n\t'");
+  //      options_cxx.at(i).string_write(buffer);
+  //      buffer.append("'");
+  //    }
+  //  }
+  //  buffer.append("]\n\n");
 
-  output->append("def IsCXXFile(file):\n");
-  output->append("\tCXX_FILES = ['.cpp', '.cxx', '.cc', '.hpp', '.hxx', '.hh']\n");
-  output->append("\tfor ext in CXX_FILES:\n");
-  output->append("\t\tif file.endswith(ext):\n");
-  output->append("\t\t\treturn True\n");
-  output->append("\treturn False\n\n");
+  //  if (comments)
+  //    buffer.append("# Compiler flags for language Objective C\n");
+  //  const me::vector<Option> &options_objc = project.build_config.compile_options.lang_objc;
+  //  buffer.append("CFLAGS_OBJC = [\n");
+  //  if (options_objc.size() != 0)
+  //  {
+  //    buffer.append("\t'");
+  //    options_objc.at(0).string_write(buffer);
+  //    buffer.append("'");
+  //    for (me::size_t i = 1; i != options_objc.size(); i++)
+  //    {
+  //      buffer.append(",\n\t'");
+  //      options_objc.at(i).string_write(buffer);
+  //      buffer.append("'");
+  //    }
+  //  }
+  //  buffer.append("]\n\n");
+  //}
 
-  output->append("def IsCFile(file):\n");
-  output->append("\tC_FILES = ['.c', '.h']\n");
-  output->append("\tfor ext in C_FILES:\n");
-  output->append("\t\tif file.endswith(ext):\n");
-  output->append("\t\t\treturn True\n");
-  output->append("\treturn False\n\n");
 
-  output->append("def IsOBJCFile(file):\n");
-  output->append("\tOBJC_FILES = ['.h', '.m', '.mm', '.M']\n");
-  output->append("\tfor ext in OBJC_FILES:\n");
-  output->append("\t\tif file.endswith(ext):\n");
-  output->append("\t\t\treturn True\n");
-  output->append("\treturn False\n\n");
+  ///* ------------ */
+  ///* Source files */
+  ///* ------------ */
+  //{
+  //  static const auto write_source = [](me::string &buffer, const Source &source) {
+  //    buffer.append("\t'");
+  //    char abs_path[PATH_MAX];
+  //    me::filesystem::absolute(source.source, abs_path);
+  //    buffer.append(abs_path).append("':");
+
+  //    if (source.language == LANGUAGE_C)
+  //      buffer.append(" CFLAGS_C");
+  //    else if (source.language == LANGUAGE_CXX)
+  //      buffer.append(" CFLAGS_CXX");
+  //    else if (source.language == LANGUAGE_OBJECTIVE_C)
+  //      buffer.append(" CFLAGS_OBJC");
+
+  //    if (source.options.size() != 0)
+  //    {
+  //      buffer.append(" + ['");
+  //      source.options.at(0).string_write(buffer);
+  //      buffer.append('\'');
+
+  //      for (me::size_t i = 1; i != source.options.size(); i++)
+  //      {
+  //        buffer.append(", '");
+  //        source.options.at(i).string_write(buffer);
+  //        buffer.append('\'');
+  //      }
+  //      buffer.append(']');
+  //    }
+  //  };
+
+  //  buffer.append("SOURCES = {\n");
+  //  if (project.sources.size() != 0)
+  //  {
+  //    write_source(buffer, project.sources.at(0));
+
+  //    for (me::size_t i = 1; i != project.sources.size(); i++)
+  //    {
+  //      buffer.append(",\n");
+  //      write_source(buffer, project.sources.at(i));
+  //    }
+  //    buffer.append("\n}\n\n");
+  //  }
+  //}
+
+  //buffer.append("def Settings(**kwargs):\n");
+  //buffer.append("\tkey = kwargs['filename']\n");
+  //buffer.append("\tif key in SOURCES:\n");
+  //buffer.append("\t\treturn { 'flags': SOURCES[key] }\n");
+  //buffer.append("\telse:\n");
+  //buffer.append("\t\tif IsCFile(key):\n");
+  //buffer.append("\t\t\treturn { 'flags': CFLAGS_C }\n");
+  //buffer.append("\t\telif IsCXXFile(key):\n");
+  //buffer.append("\t\t\treturn { 'flags': CFLAGS_CXX }\n");
+  //buffer.append("\t\telif IsOBJCFile(key):\n");
+  //buffer.append("\t\t\treturn { 'flags': CFLAGS_OBJ }\n");
+  //buffer.append("\treturn { 'flags': [ ] }\n\n");
+
+  //buffer.append("def IsCXXFile(file):\n");
+  //buffer.append("\tCXX_FILES = ['.cpp', '.cxx', '.cc', '.hpp', '.hxx', '.hh']\n");
+  //buffer.append("\tfor ext in CXX_FILES:\n");
+  //buffer.append("\t\tif file.endswith(ext):\n");
+  //buffer.append("\t\t\treturn True\n");
+  //buffer.append("\treturn False\n\n");
+
+  //buffer.append("def IsCFile(file):\n");
+  //buffer.append("\tC_FILES = ['.c', '.h']\n");
+  //buffer.append("\tfor ext in C_FILES:\n");
+  //buffer.append("\t\tif file.endswith(ext):\n");
+  //buffer.append("\t\t\treturn True\n");
+  //buffer.append("\treturn False\n\n");
+
+  //buffer.append("def IsOBJCFile(file):\n");
+  //buffer.append("\tOBJC_FILES = ['.h', '.m', '.mm', '.M']\n");
+  //buffer.append("\tfor ext in OBJC_FILES:\n");
+  //buffer.append("\t\tif file.endswith(ext):\n");
+  //buffer.append("\t\t\treturn True\n");
+  //buffer.append("\treturn False\n\n");
   return 0;
-}
-
-int makeit::YCMTarget::write_cflags(const ProjectVar &project)
-{
-#define WRITECFLAGS(l) \
-  output->append("[ "); \
-  for (size_t i = 0; i < project.cflags.size(); i++) \
-  { \
-    const CFlag &flag = project.cflags.at(i); \
-\
-    if (!(flag.langs & l)) \
-      continue; \
-\
-    output->push_back('\''); \
-    output->append(flag.option); \
-    output->push_back('\''); \
-\
-    if (i != project.cflags.size() - 1) \
-      output->append(", "); \
-  } \
-  output->append(" ]\n");
-
-  output->append("INCD = [ ");
-  for (size_t i = 0; i < project.include_directories.size(); i++)
-  {
-    output->append("'-I").append(project.include_directories.at(i)).push_back('\'');
-
-    if (i != project.include_directories.size() - 1)
-      output->append(", ");
-  }
-  output->append(" ]\n");
-
-  output->append("C_CFLAGS = INCD + ");
-  WRITECFLAGS(LANG_C)
-
-  output->append("CXX_CFLAGS = INCD + ");
-  WRITECFLAGS(LANG_CXX)
-
-  output->append("OBJC_CFLAGS = INCD + ");
-  WRITECFLAGS(LANG_OBJC)
-  return 0;
-#undef WRITECFLAGS
-}
-
-int makeit::YCMTarget::write_files(const ProjectVar &project)
-{
-  output->append("SOURCES = {\n");
-  for (me::size_t i = 0; i < project.files.size(); i++)
-  {
-    const File &file = project.files.at(i);
-
-    char abs_file_path[PATH_MAX];
-    me::filesystem::absolute(file.path, abs_file_path);
-
-    output->append("\t'").append(abs_file_path).append("': ");
-
-    if (file.lang == LANG_C)
-      output->append("C_CFLAGS + ");
-    else if (file.lang == LANG_CXX)
-      output->append("CXX_CFLAGS + ");
-    else if (file.lang == LANG_OBJC)
-      output->append("OBJC_CFLAGS + ");
-
-    append_array(output, file.cflags);
-
-    if (i != project.files.size() - 1)
-      output->append(",\n");
-    else
-      output->append("\n");
-  }
-  output->append("}\n");
-
-
-  return 0;
-}
-
-void append_array(me::string* output, const me::vector<me::string_view> &arr)
-{
-  output->append("[ ");
-
-  for (size_t i = 0; i < arr.size(); i++)
-  {
-    output->push_back('\'');
-    output->append(arr.at(i));
-    output->push_back('\'');
-
-    if (i != arr.size() - 1)
-      output->append(", ");
-  }
-
-  output->append(" ]");
 }

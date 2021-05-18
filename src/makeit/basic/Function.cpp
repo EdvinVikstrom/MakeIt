@@ -1,122 +1,77 @@
 #include "makeit/basic/Function.hpp"
 
-int makeit::ArgConfig::validate(const Variable* var, Logger &logger) const
+/* ----------------- */
+/* class FuncVariant */
+/* ----------------- */
+makeit::FuncVariant::FuncVariant(me::uint32_t index, const me::vector<FuncArgument> &args)
+  : index(index), args(args)
 {
-  if (var->type != type)
+}
+
+bool makeit::FuncVariant::validate_args(const me::vector<Variable*> &variables) const
+{
+  if (variables.size() != args.size())
+    return false;
+
+  for (me::size_t i = 0; i != args.size(); i++)
   {
-    throw RuntimeException("expected type %s but found type %s",
-	variable_type_name(type), variable_type_name(var->type));
+    if (args.at(i).type != variables.at(i)->type)
+      return false;
   }
+  return true;
+}
+/* end class FuncVariant */
 
-  switch (type)
+/* -------------- */
+/* class Function */
+/* -------------- */
+makeit::Function::Function(const me::string_view &name)
+  : name(name)
+{
+}
+
+const makeit::FuncVariant* makeit::Function::match_variant(const me::vector<Variable*> &variables) const
+{
+  for (const FuncVariant &variant : variants)
   {
-    case Variable::TEXT:
-      return reinterpret_cast<const TextArg*>(this)->validate(reinterpret_cast<const TextVar*>(var), logger);
-    case Variable::STRING:
-      return reinterpret_cast<const StringArg*>(this)->validate(reinterpret_cast<const StringVar*>(var), logger);
-    case Variable::INTEGER:
-      return reinterpret_cast<const IntegerArg*>(this)->validate(reinterpret_cast<const IntegerVar*>(var), logger);
-    case Variable::DECIMAL:
-      return reinterpret_cast<const DecimalArg*>(this)->validate(reinterpret_cast<const DecimalVar*>(var), logger);
-    case Variable::ARRAY:
-      return reinterpret_cast<const ArrayArg*>(this)->validate(reinterpret_cast<const ArrayVar*>(var), logger);
-    case Variable::TABLE:
-      return reinterpret_cast<const TableArg*>(this)->validate(reinterpret_cast<const TableVar*>(var), logger);
-    case Variable::TEMP:
-    default:
-      /* TODO: error */
-      break;
+    if (variant.validate_args(variables))
+      return &variant;
   }
-  return 0;
+  return nullptr;
 }
 
-int makeit::TextArg::validate(const TextVar* var, Logger &logger) const
+const me::string_view& makeit::Function::get_name() const
 {
-  if (valid.size())
+  return name;
+}
+
+const me::vector<makeit::FuncVariant>& makeit::Function::get_variants() const
+{
+  return variants;
+}
+/* end class Function */
+
+/* ---------------- */
+/* static functions */
+/* ---------------- */
+void makeit::write_args_to_string(const me::vector<FuncArgument> &arguments, me::string &string)
+{
+  string.reserve(128);
+  if (arguments.size() != 0)
   {
-    if (!valid.contains(var->value))
-    {
-      char temp[var->value.size() + 1];
-      throw RuntimeException("'%s' is not a valid value", var->value.c_str(temp));
-    }
+    string.append(variable_type_name(arguments.at(0).type)).append(' ').append(arguments.at(0).name);
+    for (me::size_t i = 1; i != arguments.size(); i++)
+      string.append(", ").append(variable_type_name(arguments.at(i).type)).append(' ').append(arguments.at(i).name);
   }
-  return 0;
 }
 
-int makeit::StringArg::validate(const StringVar* var, Logger &logger) const
+void makeit::write_vars_to_string(const me::vector<Variable*> &variables, me::string &string)
 {
-  if (var->value.size() < min_len)
-      throw RuntimeException("length of string is out of bounds (\e[31m%lu\e[0m < %lu)", var->value.size(), min_len);
-  else if (var->value.size() > max_len)
-      throw RuntimeException("length of string is out of bounds (\e[31m%lu\e[0m > %lu)", var->value.size(), max_len);
-  return 0;
-}
-
-int makeit::IntegerArg::validate(const IntegerVar* var, Logger &logger) const
-{
-  if (var->value < min_num)
-      throw RuntimeException("value out of bounds (\e[31m%lu\e[0m < %lu)", var->value, min_num);
-  else if (var->value > max_num)
-      throw RuntimeException("value out of bounds (\e[31m%lu\e[0m > %lu)", var->value, max_num);
-  return 0;
-}
-
-int makeit::DecimalArg::validate(const DecimalVar* var, Logger &logger) const
-{
-  if (var->value < min_num)
-      throw RuntimeException("value out of bounds (\e[31m%lu\e[0m < %lu)", var->value, min_num);
-  else if (var->value > max_num)
-      throw RuntimeException("value out of bounds (\e[31m%lu\e[0m > %lu)", var->value, max_num);
-  return 0;
-}
-
-int makeit::ArrayArg::validate(const ArrayVar* var, Logger &logger) const
-{
-  for (me::size_t i = 0; i < var->value.size(); i++)
+  string.reserve(128);
+  if (variables.size() != 0)
   {
-    try {
-      element_config->validate(var->value.at(i), logger);
-    }catch (const RuntimeException &e)
-    {
-      logger.trace("from array at index %lu", i);
-      throw;
-    }
+    string.append(variable_type_name(variables.at(0)->type));
+    for (me::size_t i = 1; i != variables.size(); i++)
+      string.append(", ").append(variable_type_name(variables.at(i)->type));
   }
-  return 0;
-}
-
-int makeit::TableArg::validate(const TableVar* var, Logger &logger) const
-{
-  for (auto const [key, val] : layout)
-  {
-    if (!var->value.contains(key))
-    {
-      if (val.required)
-      {
-	char temp[key.size() + 1];
-	throw RuntimeException("required entry('%s') not found", key.c_str(temp));
-      }else
-	continue;
-    }
-
-    try {
-      val.config->validate(var->value.at(key), logger);
-    }catch (const RuntimeException &e)
-    {
-      char temp[key.size() + 1];
-      logger.trace("from table at element '%s'", key.c_str(temp));
-      throw;
-    }
-  }
-  return 0;
-}
-
-int makeit::StructArg::validate(const StructVar* var, Logger &logger) const
-{
-  if (name != var->value)
-  {
-    char temp[var->value.size() + 1];
-    throw RuntimeException("'%s' invalid structure '%s'", var->value.c_str(temp));
-  }
-  return 0;
 }

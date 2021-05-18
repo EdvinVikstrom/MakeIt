@@ -3,7 +3,7 @@
 
 #include "makeit/Logger.hpp"
 #include "makeit/lexer/Token.hpp"
-#include "Context.hpp"
+#include "makeit/basic/Context.hpp"
 
 namespace makeit {
 
@@ -36,7 +36,7 @@ namespace makeit {
 
     int parse_expression(const Token* &iter, Variable* &accumulator, bool &result);
 
-    int parse_string(me::string &value, const TokenLocation &location);
+    int parse_string(StringVar::Value &value, const TokenLocation &location);
 
   };
 

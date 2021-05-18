@@ -7,7 +7,6 @@
 #include <libme/map.hpp>
 #include <libme/vector.hpp>
 #include <libme/string.hpp>
-#include <libme/shared_ptr.hpp>
 
 namespace makeit {
 
@@ -16,7 +15,7 @@ namespace makeit {
   public:
 
     enum Type {
-      TEMP, TEXT, STRING, INTEGER,
+      TEMP, STRING, INTEGER,
       DECIMAL, ARRAY, TABLE, STRUCT
     };
 
@@ -40,18 +39,6 @@ namespace makeit {
     typedef me::string_view Value;
     Value value;
     TempVar(const Value &value);
-    void copy(Variable* &var, me::allocator &alloc) const override;
-    void assign(Variable* var) override;
-    void append(Variable* var) override;
-    bool compare(Variable* var) const override;
-    me::string as_string() const override;
-  };
-
-  class TextVar : public Variable {
-  public:
-    typedef me::string_view Value;
-    Value value;
-    TextVar(const Value &value);
     void copy(Variable* &var, me::allocator &alloc) const override;
     void assign(Variable* var) override;
     void append(Variable* var) override;

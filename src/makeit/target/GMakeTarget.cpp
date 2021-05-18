@@ -1,247 +1,195 @@
 #include "makeit/target/GMakeTarget.hpp"
-
 #include "makeit/Text.hpp"
 
-static void append_array(me::string* output, const me::vector<me::string_view> &arr);
-
-int makeit::GMakeTarget::generate(const ProjectVar &project)
+int makeit::gmake::generate(const Project &project, me::string &buffer)
 {
-  output->append("NAME = ").append(project.name).append("_").append(project.version) += '\n';
-  output->append("VERSION = ").append(project.version) += '\n';
-  output->append("CC = ").append(get_cc_name(project.cc, project.lang)) += '\n';
-  output->append("BUILD = ").append(project.build) += '\n';
-  output->append("OUTPUT = ").append(project.output) += '\n';
+  bool comments = true;
 
-  write_cflags(project);
-  write_lflags(project);
+  buffer.append("NAME = ").append(project.name).append("_").append(project.version) += '\n';
+  buffer.append("VERSION = ").append(project.version) += '\n';
 
-  write_files(project);
-  output->push_back('\n');
+  buffer.append("OUTPUT = ").append(project.build_config.builder.output) += '\n';
 
-  write_externs(project);
-  output->push_back('\n');
+  if (comments)
+    buffer.append("\n# Directory for the object files\n");
+  buffer.append("BUILD = ").append(project.build_config.builder.directory) += '\n';
+
+  if (comments)
+    buffer.append("\n# Compiler for the language C\n");
+  buffer.append("CC = ");
+  project.build_config.builder.compile_config.lang_c.compiler.write(buffer);
+  buffer.append('\n');
+
+  if (comments)
+    buffer.append("\n# Compiler for the language C++\n");
+  buffer.append("CXXC = ");
+  project.build_config.builder.compile_config.lang_cxx.compiler.write(buffer);
+  buffer.append('\n');
+
+  if (comments)
+    buffer.append("\n# Compiler for the language Objective C\n");
+  buffer.append("OBJCC = ");
+  project.build_config.builder.compile_config.lang_objc.compiler.write(buffer);
+  buffer.append('\n');
+
+  if (comments)
+    buffer.append("\n# Linker\n");
+  buffer.append("LINKER = ");
+  project.build_config.builder.link_config.linker.write(buffer);
+  buffer.append('\n');
+
+
+
+  /* --------------- */
+  /* Options / Flags */
+  /* --------------- */
+  {
+    if (comments)
+      buffer.append("\n# Compiler flags for language C\n");
+    buffer.append("CFLAGS =");
+    project.build_config.builder.compile_config.lang_c.write(buffer, project.build_config.builder);
+    buffer += '\n';
+
+    if (comments)
+      buffer.append("\n# Compiler flags for language C++\n");
+    buffer.append("CXXFLAGS =");
+    project.build_config.builder.compile_config.lang_cxx.write(buffer, project.build_config.builder);
+    buffer += '\n';
+
+    if (comments)
+      buffer.append("\n# Compiler flags for language Objective C\n");
+    buffer.append("OBJCFLAGS =");
+    project.build_config.builder.compile_config.lang_objc.write(buffer, project.build_config.builder);
+    buffer += '\n';
+
+    if (comments)
+      buffer.append("\n# Linker flags\n");
+    buffer.append("LFLAGS =");
+    project.build_config.builder.link_config.write(buffer, project.build_config.builder);
+    buffer += '\n';
+    buffer += '\n';
+  }
+
+
+  /* ------------ */
+  /* Source files */
+  /* ------------ */
+  {
+    buffer.append("SOURCES =");
+    for (const Source &source : project.sources)
+    {
+      buffer.append(" \\\n\t");
+      source.string_write(buffer);
+    }
+
+    buffer.append("\nOBJECTS = $(SOURCES:%=$(BUILD)/%.o)\n");
+    buffer.append("DEPENDS = $(SOURCES:%=$(BUILD)/%.d)\n");
+
+    buffer += '\n';
+  }
+
+
+  /* --------- */
+  /* Externals */
+  /* --------- */
+  {
+    buffer.append("EXTERNALS =");
+    for (const External &external : project.externals)
+    {
+      buffer.append(" \\\n\t");
+      buffer.append(external.output);
+    }
+    buffer += '\n';
+    buffer += '\n';
+  }
+
+  /* --------- */
+  /* Main rule */
+  /* --------- */
+  {
+    buffer.append(".PHONY: $(NAME)\n");
+    buffer.append("$(NAME): $(OUTPUT) $(EXTERNALS)\n");
+    buffer += '\n';
+  }
+
   
-  write_rule_main(project);
-  output->push_back('\n');
-
-  write_rule_link(project);
-  output->push_back('\n');
-
-  output->append("-include $(DEPS)\n");
-  output->push_back('\n');
-
-  write_rule_files(project);
-  output->push_back('\n');
-
-  write_rule_externs(project);
-  output->push_back('\n');
-
-  write_rule_installs(project);
-  output->push_back('\n');
-
-  write_rule_clean(project);
-  return 0;
-}
-
-int makeit::GMakeTarget::write_cflags(const ProjectVar &project)
-{
-#define WRITECFLAGS(l) \
-  for (size_t i = 0; i < project.cflags.size(); i++) \
-  { \
-    const CFlag &flag = project.cflags.at(i); \
-\
-    if (!(flag.langs & l)) \
-      continue; \
-\
-    output->append(flag.option); \
-\
-    if (i != project.cflags.size() - 1) \
-      output->push_back(' '); \
-  } \
-  output->push_back('\n');
-
-  output->append("INCD = ");
-  for (size_t i = 0; i < project.include_directories.size(); i++)
+  /* --------- */
+  /* Link rule */
+  /* --------- */
   {
-    output->append("-I").append(project.include_directories.at(i));
-
-    if (i != project.include_directories.size() - 1)
-      output->push_back(' ');
-  }
-  output->push_back('\n');
-
-  output->append("LIBD = ");
-  for (me::size_t i = 0; i < project.library_directories.size(); i++)
-  {
-    output->append("-L").append(project.library_directories.at(i));
-
-    if (i != project.library_directories.size() - 1)
-      output->push_back(' ');
-  }
-  output->push_back('\n');
-
-  output->append("LIBS = ");
-  for (me::size_t i = 0; i < project.libraries.size(); i++)
-  {
-    output->append("-l").append(project.libraries.at(i).name);
-
-    if (i != project.libraries.size() - 1)
-      output->push_back(' ');
-  }
-  output->push_back('\n');
-
-  output->append("CFLAGS = $(INCD)\n");
-
-  output->append("C_CFLAGS = $(CFLAGS) ");
-  WRITECFLAGS(LANG_C)
-
-  output->append("CXX_CFLAGS = $(CFLAGS) ");
-  WRITECFLAGS(LANG_CXX)
-
-  output->append("OBJC_CFLAGS = $(CFLAGS) ");
-  WRITECFLAGS(LANG_OBJC)
-  return 0;
-#undef WRITECFLAGS
-}
-
-int makeit::GMakeTarget::write_lflags(const ProjectVar &project)
-{
-  output->append("LFLAGS = $(LIBD) $(LIBS) ");
-
-  for (me::size_t i = 0; i < project.lflags.size(); i++)
-  {
-    const LFlag &flag = project.lflags.at(i);
-
-    output->append(flag.option);
-
-    if (i != project.cflags.size() - 1)
-      output->push_back(' ');
-  }
-  output->push_back('\n');
-  return 0;
-}
-
-int makeit::GMakeTarget::write_files(const ProjectVar &project)
-{
-  output->append("SRCS = ");
-  for (size_t i = 0; i < project.files.size(); i++)
-  {
-    output->append(project.files.at(i).path);
-
-    if (i != project.files.size() - 1)
-      output->append(" \\\n\t");
-  }
-  output->append("\nOBJS = $(SRCS:%=$(BUILD)/%.o)\n");
-  output->append("DEPS = $(OBJS:%.o=%.d)\n");
-  return 0;
-}
-
-int makeit::GMakeTarget::write_externs(const ProjectVar &project)
-{
-  output->append("EXTS = ");
-  for (size_t i = 0; i < project.externs.size(); i++)
-  {
-    output->append(project.externs.at(i).output);
-
-    if (i != project.externs.size() - 1)
-      output->append(" \\\n\t");
+    buffer.append("$(OUTPUT): $(OBJECTS)\n");
+    buffer.append("\t$(LINKER) -o $@ $^ $(LFLAGS)\n");
+    buffer += '\n';
   }
 
-  output->push_back('\n');
-  return 0;
-}
 
-int makeit::GMakeTarget::write_rule_main(const ProjectVar &project)
-{
-  output->append(".PHONY: $(NAME)\n");
-  output->append("$(NAME): $(OUTPUT) $(EXTS)\n");
-  return 0;
-}
+  buffer.append("-include $(DEPENDS)\n\n");
 
-int makeit::GMakeTarget::write_rule_link(const ProjectVar &project)
-{
-  output->append("$(OUTPUT): $(OBJS)\n");
 
-  if (project.kind == KIND_EXECUTABLE)
-    output->append("\t@$(CC) -o $@ $^ $(LFLAGS)\n");
-  else if (project.kind == KIND_SHARED_LIBRARY)
-    output->append("\t@$(CC) -o $@ -shared $^ $(LFLAGS)\n");
-  else if (project.kind == KIND_STATIC_LIBRARY)
-    output->append("\t@ar rcs $@ $^\n");
-  return 0;
-}
-
-int makeit::GMakeTarget::write_rule_files(const ProjectVar &project)
-{
-  for (const File &file : project.files)
+  /* ------------ */
+  /* Source rules */
+  /* ------------ */
   {
-    output->append("$(BUILD)/").append(file.path).append(".o: ").append(file.path) += '\n';
-    output->append("\t@echo \"").append(Text::Scompile_source).append("\"\n");
-    output->append("\t@mkdir -p $(dir $@)") += '\n';
-    output->append("\t@$(CC) -c -o $@ $< ");
+    for (const Source &source : project.sources)
+    {
+      source.string_write("$(BUILD)", buffer).append(": ");
+      source.string_write(buffer).append("\n\t");
 
-    if (file.lang == LANG_CXX)
-      output->append("$(CXX_CFLAGS)");
-    else if (file.lang == LANG_C)
-      output->append("$(C_CFLAGS)");
-    else if (file.lang == LANG_OBJC)
-      output->append("$(OBJC_CFLAGS)");
+      if (source.language == LANGUAGE_C)
+	buffer.append("$(CC) $(CFLAGS)");
+      else if (source.language == LANGUAGE_CXX)
+	buffer.append("$(CXXC) $(CXXFLAGS)");
+      else if (source.language == LANGUAGE_OBJECTIVE_C)
+	buffer.append("$(OBJCC) $(OBJCFLAGS)");
 
-    append_array(output, file.cflags);
+      buffer.append(" -c -o $@ $<");
+      source.config.write(buffer, project.build_config.builder);
+      buffer.append(" -MMD\n\n");
+    }
+  }
 
-    output->append(" -MMD\n\n");
+
+  /* -------------- */
+  /* External rules */
+  /* -------------- */
+  {
+    for (const External &external : project.externals)
+    {
+      buffer.append(external.output).append(":\n");
+      buffer.append('\t').append(external.command);
+
+      for (const me::string_view &option : external.options)
+      {
+	buffer.append(' ').append(option);
+      }
+      buffer.append("\n\n");
+    }
+  }
+
+
+  /* ----------------- */
+  /* Installation rule */
+  /* ----------------- */
+  {
+    buffer.append(".PHONY: install\n");
+    buffer.append("install:\n");
+    for (const Installation &installation : project.installations)
+    {
+      buffer.append("\tinstall ");
+      buffer.append(installation.source).append(' ');
+      buffer.append(installation.directory).append('\n');
+    }
+    buffer.append('\n');
+  }
+
+
+  /* ---------- */
+  /* Clean rule */
+  /* ---------- */
+  {
+    buffer.append(".PHONY: clean\n");
+    buffer.append("clean:\n");
+    buffer.append("\trm -rf $(OBJECTS) $(DEPENDS)\n");
   }
   return 0;
-}
-
-int makeit::GMakeTarget::write_rule_externs(const ProjectVar &project)
-{
-  for (const Extern &ext : project.externs)
-  {
-    output->append(ext.output).append(": ").append(ext.path).append("\n\t");
-
-    if (ext.type == EXTERN_TYPE_CMAKE)
-      output->append("cmake $< ");
-    else if (ext.type == EXTERN_TYPE_GMAKE)
-      output->append("make -f $< ");
-    else if (ext.type == EXTERN_TYPE_MAKEIT)
-      output->append("makeit -f $< ");
-
-    append_array(output, ext.flags);
-
-    output->append("\n\n");
-  }
-  return 0;
-}
-
-int makeit::GMakeTarget::write_rule_installs(const ProjectVar &project)
-{
-  output->append(".PHONY: install\n");
-  output->append("install:\n");
-
-  for (const Install &inst : project.installs)
-  {
-    output->append("\tcp ").append(inst.src).push_back(' ');
-    output->append(inst.dest).push_back('\n');
-  }
-  return 0;
-}
-
-int makeit::GMakeTarget::write_rule_clean(const ProjectVar &project)
-{
-  output->append(".PHONY: clean\n");
-  output->append("clean:\n");
-  output->append("\trm -f $(OUT) $(OBJS) $(DEPS)\n");
-  return 0;
-}
-
-void append_array(me::string* output, const me::vector<me::string_view> &arr)
-{
-  for (me::size_t i = 0; i < arr.size(); i++)
-  {
-    output->append(arr.at(i));
-
-    if (i != arr.size() - 1)
-      output->push_back(' ');
-  }
 }

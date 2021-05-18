@@ -35,46 +35,6 @@ me::string makeit::TempVar::as_string() const
 }
 
 /* _____________________ */
-/* | class TextVar     | */
-/* |___________________| */
-makeit::TextVar::TextVar(const Value &value)
-  : Variable(TEXT), value(value)
-{
-}
-
-void makeit::TextVar::copy(Variable* &var, me::allocator &alloc) const
-{
-  var = alloc.calloc<TextVar>(value);
-}
-
-void makeit::TextVar::assign(Variable* var)
-{
-  if (var->type == TEXT)
-    value = reinterpret_cast<TextVar*>(var)->value;
-  else
-    throw RuntimeException(Text::Ecannot_assign_types, variable_type_name(TEXT), variable_type_name(var->type));
-}
-
-void makeit::TextVar::append(Variable* var)
-{
-  throw RuntimeException(Text::Ecannot_append_type, variable_type_name(TEXT));
-}
-
-bool makeit::TextVar::compare(Variable* var) const
-{
-  if (var->type == TEXT)
-    return value == reinterpret_cast<TextVar*>(var)->value;
-  else if (var->type == STRING)
-    return value == reinterpret_cast<StringVar*>(var)->value;
-  throw RuntimeException(Text::Ecannot_compare_types, variable_type_name(TEXT), variable_type_name(var->type));
-}
-
-me::string makeit::TextVar::as_string() const
-{
-  return value;
-}
-
-/* _____________________ */
 /* | class StringVar   | */
 /* |___________________| */
 makeit::StringVar::StringVar(const Value &value)
@@ -91,8 +51,6 @@ void makeit::StringVar::assign(Variable* var)
 {
   if (var->type == STRING)
     value = reinterpret_cast<StringVar*>(var)->value;
-  else if (var->type == TEXT)
-    value = reinterpret_cast<TextVar*>(var)->value;
   else
     throw RuntimeException(Text::Ecannot_assign_types, variable_type_name(STRING), variable_type_name(var->type));
 }
@@ -101,8 +59,6 @@ void makeit::StringVar::append(Variable* var)
 {
   if (var->type == STRING)
     value += reinterpret_cast<StringVar*>(var)->value;
-  else if (var->type == TEXT)
-    value += reinterpret_cast<TextVar*>(var)->value;
   else
     throw RuntimeException(Text::Ecannot_append_types, variable_type_name(STRING), variable_type_name(var->type));
 }
@@ -111,8 +67,6 @@ bool makeit::StringVar::compare(Variable* var) const
 {
   if (var->type == STRING)
     return value == reinterpret_cast<StringVar*>(var)->value;
-  else if (var->type == TEXT)
-    return value == reinterpret_cast<TextVar*>(var)->value;
   throw RuntimeException(Text::Ecannot_compare_types, variable_type_name(STRING), variable_type_name(var->type));
 }
 
@@ -343,7 +297,6 @@ const char* makeit::variable_type_name(Variable::Type type)
   switch (type)
   {
     case Variable::TEMP: return "TEMP";
-    case Variable::TEXT: return "TEXT";
     case Variable::STRING: return "STRING";
     case Variable::INTEGER: return "INTEGER";
     case Variable::DECIMAL: return "DECIMAL";

@@ -32,37 +32,34 @@ int makeit::Parser::parse_function(const Token* &iter)
         "undefined function '%s'", function_token->location.pos.c_str(temp));
   }
 
-  /* Check if required argument count matched */
-  if (function->args.size() != call_args.size())
+  const FuncVariant* func_variant = function->match_variant(call_args);
+  if (func_variant == nullptr)
   {
-    throw LocException(function_token->location,
-	"expected %lu argument(s) but %lu was provided", function->args.size(), call_args.size());
-  }
+    char temp[function_token->location.pos.size() + 1];
+    function_token->location.pos.c_str(temp);
 
-  for (me::size_t i = 0; i < function->args.size(); i++)
-  {
-    try {
-      function->args.at(i)->validate(call_args.at(i), logger);
-    }catch (const RuntimeException &e)
+    logger.printf("\nFunction variants:\n");
+    for (const FuncVariant &variant : function->get_variants())
     {
-      char temp[function_token->location.pos.size() + 1];
-      logger.trace(function_token->location,
-	  "from function '%s' at argument %lu", function_token->location.pos.c_str(temp), i);
-      throw;
+      me::string args_string;
+      write_args_to_string(variant.args, args_string);
+      logger.printf("\n\t%s(%s)\n", temp, args_string.c_str());
     }
+
+    me::string call_args_string;
+    write_vars_to_string(call_args, call_args_string);
+    throw LocException(function_token->location, "no match for function call %s(%s)",
+	temp, call_args_string.c_str());
   }
 
   /* Calling the function */
   try {
-    function->func(call_args, context, context.func_user_ptr);
+    function->execute(*func_variant, call_args, context);
   }catch (const RuntimeException &e)
   {
     char temp[function_token->location.pos.size() + 1];
     throw LocException(function_token->location,
         "in function '%s': %s", function_token->location.pos.c_str(temp), e.get_message());
   }
-
-
-
   return 0;
 }

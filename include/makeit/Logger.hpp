@@ -17,19 +17,19 @@ namespace makeit {
 
     Logger(FILE* file);
 
-    int print(const char* format, ...) const;
+    const Logger& printf(const char* format, ...) const;
 
-    int fatal(const char* format, ...) const;
+    const Logger& fatal(const char* format, ...) const;
 
-    int error(const char* format, ...) const;
+    const Logger& error(const char* format, ...) const;
 
-    int warning(const char* format, ...) const;
+    const Logger& warning(const char* format, ...) const;
 
-    int debug(const char* format, ...) const;
+    const Logger& debug(const char* format, ...) const;
 
-    int trace(const TokenLocation &location, const char* format, ...) const;
+    const Logger& trace(const char* format, ...) const;
 
-    int trace(const char* format, ...) const;
+    const Logger& location(const TokenLocation &location) const;
 
   };
 

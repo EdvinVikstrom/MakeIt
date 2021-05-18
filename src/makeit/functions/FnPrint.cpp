@@ -2,18 +2,24 @@
 #include "makeit/basic/Project.hpp"
 #include "makeit/Text.hpp"
 
-int makeit::func_print_init(Context &context)
-{
-  Function* function = new Function{
-    {
-      new StringArg(),
-    }, func_print};
-  context.functions.put("print", function);
-  return 0;
+namespace makeit {
+
+  static const me::vector<FuncArgument> variant1 = {
+    {"text", Variable::STRING}
+  };
+
 }
 
-int makeit::func_print(const me::vector<Variable*> &args, Context &context, void* ptr)
+makeit::PrintFunc::PrintFunc()
+  : Function("print")
 {
-  printf("%s\n", reinterpret_cast<StringVar*>(args.at(0))->value.c_str());
+  variants.push_back(FuncVariant(1, variant1));
+}
+
+int makeit::PrintFunc::execute(const FuncVariant &variant, const me::vector<Variable*> &args, Context &context)
+{
+  const StringVar* string = reinterpret_cast<StringVar*>(args.at(0));
+
+  printf("%s\n", string->value.c_str());
   return 0;
 }
